@@ -1,5 +1,6 @@
 // ========================================
 // LAMMB: Trenches Runner - Get Wallet Balance Function
+// No external dependencies - uses native fetch
 // ========================================
 
 exports.handler = async (event, context) => {
@@ -25,7 +26,7 @@ exports.handler = async (event, context) => {
         const rewardsWallet = process.env.REWARDS_WALLET_ADDRESS || 'LAMMBWxKsMVc3K1JLptqyBGYTEPqGjVvLHn6zVSBGdL';
         const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
         
-        // Fetch balance from Solana RPC
+        // Fetch balance from Solana RPC using JSON-RPC
         const response = await fetch(rpcUrl, {
             method: 'POST',
             headers: {
@@ -39,15 +40,19 @@ exports.handler = async (event, context) => {
             }),
         });
         
+        if (!response.ok) {
+            throw new Error(`RPC request failed: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.error) {
-            throw new Error(data.error.message);
+            throw new Error(data.error.message || 'RPC error');
         }
         
-        // Convert lamports to SOL
+        // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
         const balanceLamports = data.result?.value || 0;
-        const balanceSOL = balanceLamports / 1e9;
+        const balanceSOL = balanceLamports / 1_000_000_000;
         
         return {
             statusCode: 200,
@@ -62,12 +67,17 @@ exports.handler = async (event, context) => {
         
     } catch (error) {
         console.error('Balance fetch error:', error);
+        
+        // Return a fallback response so the UI doesn't break
         return {
-            statusCode: 500,
+            statusCode: 200,
             headers,
             body: JSON.stringify({ 
-                error: 'Failed to fetch balance',
+                wallet: process.env.REWARDS_WALLET_ADDRESS || 'LAMMBWxKsMVc3K1JLptqyBGYTEPqGjVvLHn6zVSBGdL',
                 balance: 0,
+                lamports: 0,
+                timestamp: new Date().toISOString(),
+                error: 'Unable to fetch balance',
             }),
         };
     }
