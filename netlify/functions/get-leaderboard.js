@@ -2,8 +2,6 @@
 // LAMMB: Trenches Runner - Get Leaderboard Function
 // ========================================
 
-const { createClient } = require('@supabase/supabase-js');
-
 // Get current ISO week ID
 function getWeekId() {
     const now = new Date();
@@ -42,8 +40,8 @@ exports.handler = async (event, context) => {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY;
         
+        // If Supabase is not configured, return mock data for demo
         if (!supabaseUrl || !supabaseKey) {
-            // Return mock data for development
             return {
                 statusCode: 200,
                 headers,
@@ -57,46 +55,65 @@ exports.handler = async (event, context) => {
                         { wallet: 'Demo5555555555555555555555555555555555555555', score: 7000 },
                     ],
                     userRank: wallet ? { rank: 99, score: 1000 } : null,
+                    demo: true,
                 }),
             };
         }
         
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        // Use fetch to call Supabase REST API directly (no SDK needed)
+        const leaderboardResponse = await fetch(
+            `${supabaseUrl}/rest/v1/scores?week_id=eq.${weekId}&order=score.desc&limit=25`,
+            {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                },
+            }
+        );
         
-        // Fetch top 25 scores for the week
-        const { data: leaderboard, error: leaderboardError } = await supabase
-            .from('scores')
-            .select('wallet, score')
-            .eq('week_id', weekId)
-            .order('score', { ascending: false })
-            .limit(25);
-        
-        if (leaderboardError) {
-            throw leaderboardError;
+        if (!leaderboardResponse.ok) {
+            throw new Error('Failed to fetch leaderboard');
         }
+        
+        const leaderboard = await leaderboardResponse.json();
         
         let userRank = null;
         
         if (wallet) {
-            // Get user's rank
-            const { data: userScore, error: userError } = await supabase
-                .from('scores')
-                .select('score')
-                .eq('week_id', weekId)
-                .eq('wallet', wallet)
-                .single();
+            // Get user's score
+            const userResponse = await fetch(
+                `${supabaseUrl}/rest/v1/scores?week_id=eq.${weekId}&wallet=eq.${wallet}&limit=1`,
+                {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                    },
+                }
+            );
             
-            if (userScore && !userError) {
-                // Count how many scores are higher
-                const { count } = await supabase
-                    .from('scores')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('week_id', weekId)
-                    .gt('score', userScore.score);
+            const userData = await userResponse.json();
+            
+            if (userData && userData.length > 0) {
+                const userScore = userData[0].score;
+                
+                // Count scores higher than user's
+                const countResponse = await fetch(
+                    `${supabaseUrl}/rest/v1/scores?week_id=eq.${weekId}&score=gt.${userScore}&select=id`,
+                    {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Prefer': 'count=exact',
+                        },
+                    }
+                );
+                
+                const countHeader = countResponse.headers.get('content-range');
+                const count = countHeader ? parseInt(countHeader.split('/')[1]) || 0 : 0;
                 
                 userRank = {
-                    rank: (count || 0) + 1,
-                    score: userScore.score,
+                    rank: count + 1,
+                    score: userScore,
                 };
             }
         }
@@ -106,7 +123,10 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 weekId,
-                leaderboard: leaderboard || [],
+                leaderboard: leaderboard.map(entry => ({
+                    wallet: entry.wallet,
+                    score: entry.score,
+                })),
                 userRank,
             }),
         };
