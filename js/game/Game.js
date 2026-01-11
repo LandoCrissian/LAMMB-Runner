@@ -169,10 +169,40 @@ export class Game {
         this.scoreManager = new ScoreManager(this);
         this.audioManager = new AudioManager(this);
         this.inputManager = new InputManager(this);
+        
+        // Render initial frame for attract mode
+        this.renderAttractMode();
+    }
+    
+    renderAttractMode() {
+        // Render a static scene for the menu background
+        this.renderer.render(this.scene, this.camera);
+        
+        // Animate attract mode
+        this.attractModeActive = true;
+        this.animateAttractMode();
+    }
+    
+    animateAttractMode() {
+        if (!this.attractModeActive || this.isRunning) return;
+        
+        requestAnimationFrame(() => this.animateAttractMode());
+        
+        // Gentle camera sway
+        const time = performance.now() * 0.001;
+        this.camera.position.x = Math.sin(time * 0.3) * 1;
+        this.camera.position.y = this.cameraOffset.y + Math.sin(time * 0.5) * 0.3;
+        this.camera.lookAt(0, 1, -10);
+        
+        // Render
+        this.renderer.render(this.scene, this.camera);
     }
     
     start() {
         if (this.isRunning) return;
+        
+        // Stop attract mode
+        this.attractModeActive = false;
         
         this.reset();
         this.isRunning = true;
