@@ -3,6 +3,7 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+  command = "echo 'No build needed'"
 
 # Redirects for API
 [[redirects]]
@@ -21,13 +22,32 @@
 [[headers]]
   for = "*.js"
   [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-    Cache-Control = "public, max-age=3600"
+    Content-Type = "text/javascript; charset=utf-8"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/js/**/*.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+    Cache-Control = "no-cache"
 
 [[headers]]
   for = "*.css"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Content-Type = "text/css; charset=utf-8"
+    Cache-Control = "no-cache"
 
 [[headers]]
   for = "/assets/*"
