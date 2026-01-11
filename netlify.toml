@@ -4,7 +4,7 @@
   publish = "."
   functions = "netlify/functions"
 
-# Redirects for SPA
+# Redirects for API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -22,25 +22,25 @@
   for = "*.js"
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
   for = "*.css"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Functions configuration
+# Functions configuration - no external dependencies needed
 [functions]
   node_bundler = "esbuild"
 
-# Environment variables (set in Netlify dashboard)
-# SUPABASE_URL = your-supabase-url
-# SUPABASE_ANON_KEY = your-anon-key
-# SUPABASE_SERVICE_ROLE_KEY = your-service-role-key
-# REWARDS_WALLET_ADDRESS = your-rewards-wallet
-# SOLANA_RPC_URL = https://api.mainnet-beta.solana.com
+# Environment variables (set in Netlify dashboard):
+# SUPABASE_URL - Your Supabase project URL
+# SUPABASE_ANON_KEY - Supabase anonymous/public key (for reads)
+# SUPABASE_SERVICE_ROLE_KEY - Supabase service role key (for writes)
+# REWARDS_WALLET_ADDRESS - Community rewards wallet address
+# SOLANA_RPC_URL - (optional) Custom Solana RPC URL
